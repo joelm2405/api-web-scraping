@@ -4,7 +4,7 @@ import boto3
 import uuid
 
 def lambda_handler(event, context):
-    url = "https://ultimosismo.igp.gob.pe/ultimosismo/sismos-reportados"
+    url = "https://ultimosismo.igp.gob.pe/ultimo-sismo/sismos-reportados"
 
     response = requests.get(url)
     if response.status_code != 200:
