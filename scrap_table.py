@@ -4,7 +4,7 @@ import boto3
 import uuid
 
 def lambda_handler(event, context):
-    url = "https://ultimosismo.igp.gob.pe/ultimo-sismo/sismos-reportados"
+    url = "https://www.sismologia.cl/"
     response = requests.get(url)
     if response.status_code != 200:
         return {
@@ -22,13 +22,13 @@ def lambda_handler(event, context):
 
     headers = [header.text.strip() for header in table.find_all('th')]
     rows = []
-    for row in table.find_all('tr')[1:11]:
+    for row in table.find_all('tr')[1:]:
         cells = row.find_all('td')
         row_data = {headers[i]: cell.text.strip() for i, cell in enumerate(cells)}
         rows.append(row_data)
 
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('TablaSismos')
+    table = dynamodb.Table('TablaSismosChile')
     scan = table.scan()
     with table.batch_writer() as batch:
         for each in scan['Items']:
