@@ -24,43 +24,55 @@ def lambda_handler(event, context):
             'body': 'No se encontró la tabla en la página web'
         }
 
-    # Extraer encabezados de la tabla
-    headers = [header.text.strip() for header in table.find_all('th')]
-
-    # Extraer datos de las filas de la tabla
-    records = []
-    for row in table.find_all('tr')[1:]:  # Saltar la fila de encabezados
+    # Extraer los datos de la tabla
+    array = []
+    for row in table.find_all('tr')[1:]:  # Saltar el encabezado de la tabla
         cols = row.find_all('td')
-        if len(cols) == len(headers):  # Asegurar que cada fila tenga el número correcto de columnas
-            record = {headers[i]: cols[i].text.strip() for i in range(len(cols))}
-            records.append(record)
-
-    # Ordenar registros por fecha y hora si el formato lo permite (opcional)
-    try:
-        records.sort(key=lambda x: x['FECHA - HORA (UTC)'], reverse=True)
-    except KeyError:
-        pass  # Si el campo no está bien formado, continuar sin ordenar
+        if len(cols) >= 6:  # Validar que existan suficientes columnas
+            # Extraer datos de las columnas
+            fecha_hora = cols[0].text.strip()
+            latitud = cols[1].text.strip()
+            longitud = cols[2].text.strip()
+            magnitud = cols[3].text.strip()
+            profundidad = cols[4].text.strip()
+            localidad = cols[5].text.strip()
+            
+            # Crear un registro y agregarlo al array
+            array.append((fecha_hora, {
+                'fecha_hora': fecha_hora,
+                'latitud': latitud,
+                'longitud': longitud,
+                'magnitud': magnitud,
+                'profundidad': profundidad,
+                'localidad': localidad
+            }))
+    
+    # Ordenar el array por la fecha y hora
+    array.sort(key=lambda x: x[0], reverse=True)
 
     # Seleccionar los 10 registros más recientes
-    recent_records = records[:10]
+    registros_recientes = [record[1] for record in array[:10]]
 
-    # Configurar DynamoDB
+    # Configuración de DynamoDB
     dynamodb = boto3.resource('dynamodb')
-    table_name = 'TablaWebScrappingSismosNuevo'  # Nombre de la tabla en DynamoDB
+    table_name = 'TablaWebScrappingSismosNuevo'
     table = dynamodb.Table(table_name)
 
-    # Limpiar la tabla en DynamoDB
+    # Limpiar la tabla DynamoDB existente
     with table.batch_writer() as batch:
         for item in table.scan()['Items']:
             batch.delete_item(Key={'id': item['id']})
 
-    # Insertar registros recientes en DynamoDB
-    for record in recent_records:
-        record['id'] = str(uuid.uuid4())  # Agregar un identificador único
-        table.put_item(Item=record)
+    # Insertar los registros recientes en DynamoDB
+    resultado = []
+    for i, registro in enumerate(registros_recientes, start=1):
+        registro['#'] = i  # Agregar un índice al registro
+        registro['id'] = str(uuid.uuid4())  # Generar un UUID único
+        resultado.append(registro)  # Agregar a la lista de resultados
+        table.put_item(Item=registro)  # Insertar en DynamoDB
 
-    # Retornar los datos procesados
+    # Devolver los registros procesados
     return {
         'statusCode': 200,
-        'body': recent_records
+        'body': resultado
     }
