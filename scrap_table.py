@@ -55,7 +55,7 @@ def lambda_handler(event, context):
 
     # Configuración de DynamoDB
     dynamodb = boto3.resource('dynamodb')
-    table_name = 'TablaWebScrappingSismosNuevo'
+    table_name = 'TablaWebScrappingSismos'
     table = dynamodb.Table(table_name)
 
     # Limpiar la tabla DynamoDB existente
